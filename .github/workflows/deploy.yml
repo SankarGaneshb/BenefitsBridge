@@ -6,13 +6,16 @@ on:
       - main
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: benefitsbridge-491606
   SERVICE_NAME: benefits-bridge
   REGION: us-central1
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     steps:
     - name: Checkout
@@ -22,7 +25,8 @@ jobs:
       id: auth
       uses: google-github-actions/auth@v2
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+        service_account: github-deployer@benefitsbridge-491606.iam.gserviceaccount.com
 
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
