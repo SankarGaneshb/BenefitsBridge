@@ -11,6 +11,8 @@ export interface ReadinessResult {
   found: string[];
   missing: string[];
   percentage: number;
+  isAiRecommended?: boolean;
+  aiReason?: string;
 }
 
 const PROGRAMS: ProgramRequirement[] = [
@@ -29,7 +31,7 @@ const PROGRAMS: ProgramRequirement[] = [
 ];
 
 export const mapEligibility = (extractedFields: { label: string; value: string }[]): ReadinessResult[] => {
-  return PROGRAMS.map(program => {
+  const mapped = PROGRAMS.map(program => {
     const found: string[] = [];
     const missing: string[] = [];
 
@@ -58,4 +60,39 @@ export const mapEligibility = (extractedFields: { label: string; value: string }
       percentage
     };
   });
+
+  // AI Logic: Recommend secondary programs based on data
+  const incomeField = extractedFields.find(f => f.label.toLowerCase().includes('income'));
+  const sizeField = extractedFields.find(f => f.label.toLowerCase().includes('size'));
+  
+  if (incomeField && sizeField) {
+    const income = parseInt(incomeField.value.replace(/[^0-9]/g, '')) || 0;
+    const size = parseInt(sizeField.value) || 0;
+
+    if (size >= 3) {
+      mapped.push({
+        programName: 'WIC (Women, Infants, Children)',
+        status: 'partial',
+        found: ['HouseholdSize'],
+        missing: ['MedicalRecords', 'ProofOfPregnancy'],
+        percentage: 33,
+        isAiRecommended: true,
+        aiReason: 'Since your household size is 3 or more, you may qualify for supplemental nutritional support.'
+      });
+    }
+
+    if (income < 3000) {
+      mapped.push({
+        programName: 'LIHEAP Utility Relief',
+        status: 'partial',
+        found: ['MonthlyIncome', 'PrimaryAddress'],
+        missing: ['UtilityBill'],
+        percentage: 66,
+        isAiRecommended: true,
+        aiReason: 'Based on your monthly income, you likely qualify for emergency utility assistance.'
+      });
+    }
+  }
+
+  return mapped;
 };
